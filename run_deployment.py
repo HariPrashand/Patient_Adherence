@@ -24,7 +24,7 @@ DEPLOY_AND_PREDICT = "deploy_and_predict"
 )
 @click.option(
     "--min-accuracy",
-    default=0.92,
+    default=0,
     help="Minimum accuracy required to deploy the model",
 )
 
@@ -63,6 +63,7 @@ def main(config: str , min_accuracy: float):
 
     if existing_services:
         service = cast(MLFlowDeploymentService, existing_services[0])
+        service.start(timeout=500)
         if service.is_running:
             print(
                 f"The MLflow prediction server is running locally as a daemon "

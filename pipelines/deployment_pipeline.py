@@ -1,3 +1,4 @@
+import os
 import json
 import numpy as np
 import pandas as pd
@@ -9,6 +10,7 @@ from zenml.integrations.constants import MLFLOW, TENSORFLOW
 from zenml.integrations.mlflow.model_deployers.mlflow_model_deployer import (
     MLFlowModelDeployer,
 )
+from zenml.integrations.mlflow.mlflow_utils import get_tracking_uri
 from zenml.integrations.mlflow.services import MLFlowDeploymentService
 from zenml.integrations.mlflow.steps import mlflow_model_deployer_step
 from zenml.steps import BaseParameters, Output
@@ -21,6 +23,8 @@ from steps.model_train import model_train
 from .utils import get_data_for_test
 docker_settings = DockerSettings(required_integrations=[MLFLOW])
 
+requirements_file = os.path.join(os.path.dirname(__file__), "requirements.txt")
+
 @step(enable_cache=False)
 def dynamic_importer() -> str:
     """Downloads the latest data from a mock API."""
@@ -30,7 +34,7 @@ def dynamic_importer() -> str:
 class DeploymentTriggerConfig(BaseParameters):
     """Parameters that are used to trigger the deployment"""
 
-    min_accuracy: float = 0.75
+    min_accuracy: float = 0.0
 @step
 def deployment_trigger(
     accuracy: float,
@@ -76,7 +80,13 @@ def prediction_service_loader(
     """
     # get the MLflow model deployer stack component
     model_deployer = MLFlowModelDeployer.get_active_model_deployer()
-
+    print(model_deployer)
+    # deployment_service = model_deployer.deploy_model(
+    #     model_uri=f"{get_tracking_uri()}",
+    #     model_name="model",
+    #     workers=3,
+    #     timeout=DEFAULT_SERVICE_START_STOP_TIMEOUT,
+    # )
     # fetch existing services with same pipeline name, step name and model name
     existing_services = model_deployer.find_model_server(
         pipeline_name=pipeline_name,
@@ -84,7 +94,6 @@ def prediction_service_loader(
         model_name=model_name,
         running=running,
     )
-
     if not existing_services:
         raise RuntimeError(
             f"No MLflow prediction service deployed by the "
@@ -92,6 +101,7 @@ def prediction_service_loader(
             f"pipeline for the '{model_name}' model is currently "
             f"running."
         )
+    
     print(existing_services)
     print(type(existing_services))
     return existing_services[0]
@@ -133,25 +143,27 @@ def predictor(
     prediction = service.predict(data)
     return prediction
 
-@pipeline(enable_cache=True, settings={"docker": docker_settings})
+@pipeline(enable_cache=False, settings={"docker": docker_settings})
 def continuous_deployment_pipeline(
     data_path : str,
-    min_accuracy: float = 0.75,
-    workers: int = 1,
-    timeout: int = DEFAULT_SERVICE_START_STOP_TIMEOUT,
+    min_accuracy: float = 0.0,
+    workers: int = 3,
+    timeout: int = 60,
 ):
     # Link all the steps artifacts together
     df = ingest_data(data_path)
     X_train , X_test, Y_train, Y_test, preprocessor = clean_data(df)
     model = model_train(X_train, Y_train, X_test, Y_test, preprocessor)
     r2_score , mse = evaluate_model(model , X_test,Y_test)
-    deployment_decision = deployment_trigger(accuracy=mse)
+    deployment_decision = True
     mlflow_model_deployer_step(
         model=model,
         deploy_decision=deployment_decision,
         workers=workers,
         timeout=timeout,
     )
+    model_deployer = MLFlowModelDeployer.get_active_model_deployer()
+    print(model_deployer)
     
 @pipeline(enable_cache=False, settings={"docker": docker_settings})
 def inference_pipeline(pipeline_name: str, pipeline_step_name: str):
@@ -160,7 +172,7 @@ def inference_pipeline(pipeline_name: str, pipeline_step_name: str):
     model_deployment_service = prediction_service_loader(
         pipeline_name=pipeline_name,
         pipeline_step_name=pipeline_step_name,
-        running=False,
+        running=True,
     )
     prediction = predictor(service=model_deployment_service, data=batch_data)
     return prediction

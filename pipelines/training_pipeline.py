@@ -7,7 +7,7 @@ import mlflow
 
 mlflow.autolog(disable=False)
 
-@pipeline(enable_cache=True)
+@pipeline(enable_cache=False)
 def training_pipeline(data_path: str):
     df = ingest_data(data_path)
     X_train , X_test, Y_train, Y_test, preprocessor = clean_data(df)
