@@ -34,7 +34,7 @@ def dynamic_importer() -> str:
 class DeploymentTriggerConfig(BaseParameters):
     """Parameters that are used to trigger the deployment"""
 
-    min_accuracy: float = 0.0
+    min_accuracy: float = 0.5
 @step
 def deployment_trigger(
     accuracy: float,
@@ -154,7 +154,7 @@ def continuous_deployment_pipeline(
     df = ingest_data(data_path)
     X_train , X_test, Y_train, Y_test, preprocessor = clean_data(df)
     model = model_train(X_train, Y_train, X_test, Y_test, preprocessor)
-    r2_score , mse = evaluate_model(model , X_test,Y_test)
+    acc , spec = evaluate_model(model , X_test,Y_test)
     deployment_decision = True
     mlflow_model_deployer_step(
         model=model,

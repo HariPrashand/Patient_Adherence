@@ -1,11 +1,13 @@
 import logging
 from abc import ABC, abstractmethod
+import lightgbm as lgb
 from xgboost import XGBClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
 
 class Model(ABC):
     @abstractmethod
@@ -58,6 +60,34 @@ class MLP_Classifier(Model):
     def train(self, x_train, y_train,preprocessor, **kwargs):
         model = MLPClassifier(hidden_layer_sizes=(100,), max_iter=500, random_state=42)
 
+        # Create a pipeline with preprocessing and model
+        pipeline = Pipeline(steps=[
+            ('preprocessor', preprocessor),
+            ('classifier', model)
+        ])
+
+        # Train the pipeline
+        pipeline.fit(x_train, y_train)
+        return pipeline
+    
+class LightGBM(Model):
+    def train(self, x_train, y_train,preprocessor, **kwargs):
+        model = lgb.LGBMClassifier(random_state=42)
+                
+        # Create a pipeline with preprocessing and model
+        pipeline = Pipeline(steps=[
+            ('preprocessor', preprocessor),
+            ('classifier', model)
+        ])
+
+        # Train the pipeline
+        pipeline.fit(x_train, y_train)
+        return pipeline
+    
+class DecisionTree(Model):
+    def train(self, x_train, y_train,preprocessor, **kwargs):
+        model = DecisionTreeClassifier(random_state=42)
+                
         # Create a pipeline with preprocessing and model
         pipeline = Pipeline(steps=[
             ('preprocessor', preprocessor),

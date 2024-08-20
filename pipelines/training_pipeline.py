@@ -12,6 +12,6 @@ def training_pipeline(data_path: str):
     df = ingest_data(data_path)
     X_train , X_test, Y_train, Y_test, preprocessor = clean_data(df)
     model = model_train(X_train, Y_train, X_test, Y_test, preprocessor)
-    r2_score , mse = evaluate_model(model , X_test,Y_test)
+    acc , spec = evaluate_model(model , X_test,Y_test)
     
     
