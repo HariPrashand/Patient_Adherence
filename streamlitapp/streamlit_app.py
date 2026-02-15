@@ -27,9 +27,9 @@ import base64
 #     background-size: cover;
 # }}
 # </style>
-# '''
+# # '''
 
-st.markdown(page_bg_img, unsafe_allow_html=True)
+# st.markdown(page_bg_img, unsafe_allow_html=True)
 st.markdown("""
     <style>
     .header {
